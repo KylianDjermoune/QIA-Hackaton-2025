@@ -3,49 +3,48 @@ import netsquid as ns
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
 
 
-class AliceProgram(Program):
-    NODE_NAME = "Alice"
-    PEER_BOB = "Bob"
+class ServerProgram(Program):
+    NODE_NAME = "Server"
+    PEER_CLIENT = "Client"
 
     @property
     def meta(self) -> ProgramMeta:
         return ProgramMeta(
             name=f"program_{self.NODE_NAME}",
-            csockets=[self.PEER_BOB],
-            epr_sockets=[self.PEER_BOB],
+            csockets=[self.PEER_CLIENT],
+            epr_sockets=[self.PEER_CLIENT],
             max_qubits=2,
         )
 
     def run(self, context: ProgramContext):
         # get classical sockets
-        csocket_bob = context.csockets[self.PEER_BOB]
+        csocket_bob = context.csockets[self.PEER_CLIENT]
         # get EPR sockets
-        epr_socket_bob = context.epr_sockets[self.PEER_BOB]
+        epr_socket_bob = context.epr_sockets[self.PEER_CLIENT]
         # get connection to QNPU
         connection = context.connection
 
         print(f"{ns.sim_time()} ns: Hello from {self.NODE_NAME}")
         return {}
 
-
-class BobProgram(Program):
-    NODE_NAME = "Bob"
-    PEER_ALICE = "Alice"
+class ClientProgram(Program):
+    NODE_NAME = "Client"
+    PEER_SERVER = "Server"
 
     @property
     def meta(self) -> ProgramMeta:
         return ProgramMeta(
             name=f"program_{self.NODE_NAME}",
-            csockets=[self.PEER_ALICE],
-            epr_sockets=[self.PEER_ALICE],
+            csockets=[self.PEER_SERVER],
+            epr_sockets=[self.PEER_SERVER],
             max_qubits=2,
         )
 
     def run(self, context: ProgramContext):
         # get classical sockets
-        csocket_alice = context.csockets[self.PEER_ALICE]
+        csocket_SERVER = context.csockets[self.PEER_SERVER]
         # get EPR sockets
-        epr_socket_alice = context.epr_sockets[self.PEER_ALICE]
+        epr_socket_SERVER = context.epr_sockets[self.PEER_SERVER]
         # get connection to QNPU
         connection = context.connection
 

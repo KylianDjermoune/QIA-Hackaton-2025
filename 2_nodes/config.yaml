@@ -1,4 +1,4 @@
-# 2 node network with Alice and Bob nodes
+# 2 node network with Server and Client nodes
 
 ############### Component settings ###############
 quantum_device_settings: &qdevice_cfg
@@ -35,28 +35,28 @@ classical_link_settings: &clink_cfg
 
 ############### Network ###############
 stacks:
-  - name: Alice
+  - name: Server
     qdevice_typ: generic
     qdevice_cfg:
       <<: *qdevice_cfg
 
-  - name: Bob
+  - name: Client
     qdevice_typ: generic
     qdevice_cfg:
       <<: *qdevice_cfg
 
 
 links:
-  - stack1: Alice
-    stack2: Bob
+  - stack1: Server
+    stack2: Client
     typ: depolarise
     cfg:
       <<: *qlink_cfg
 
 
 clinks:
-  - stack1: Alice
-    stack2: Bob
+  - stack1: Server
+    stack2: Client
     typ: default
     cfg:
       <<: *clink_cfg
