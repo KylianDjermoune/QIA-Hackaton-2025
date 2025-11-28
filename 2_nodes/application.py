@@ -53,6 +53,12 @@ class ServerProgram(Program):
         yield from connection.flush()
 
         print(f"Local qubits: {r1}, {r2}")
+
+        received_qubit = yield from teleport_recv(context, self.PEER_CLIENT)
+        received_qubit.H()
+        result = received_qubit.measure()
+        yield from connection.flush()
+        print("Result = ", result)
         
         return {}
 
@@ -82,6 +88,6 @@ class ClientProgram(Program):
         plus_qubit = Qubit(connection)
         plus_qubit.H()
 
-        teleport_send(plus_qubit, context, self.PEER_SERVER)
+        yield from teleport_send(plus_qubit, context, self.PEER_SERVER)
 
         return {}
