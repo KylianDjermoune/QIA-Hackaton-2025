@@ -29,8 +29,7 @@ class ServerProgram(Program):
         # get connection to QNPU
         connection = context.connection
 
-        print(f"{ns.sim_time()} ns: Hello from {self.NODE_NAME}")
-
+        ######################## - CLASSICAL GROVER - #########################
         local_qubit_1 = Qubit(connection)
         local_qubit_2 = Qubit(connection)
 
@@ -38,25 +37,36 @@ class ServerProgram(Program):
         local_qubit_1.H()
         local_qubit_2.H()
 
-        for _ in range(3):
-            #Tagging
-            local_qubit_1.cphase(local_qubit_2)
-            local_qubit_1.rot_Z(0, 0)
-            local_qubit_2.rot_Z(1, 0)
+        #Tagging
+        local_qubit_1.cphase(local_qubit_2)
+        local_qubit_1.rot_Z(0, 0)
+        local_qubit_2.rot_Z(0, 0)
 
-            #Inversion
-            local_qubit_1.rot_Z(3, 1)
-            local_qubit_1.H()
-            local_qubit_1.cphase(local_qubit_2)
-            local_qubit_2.H()
+        #Inversion
+        local_qubit_1.rot_Z(3, 1)
+        local_qubit_1.H()
+        local_qubit_1.cphase(local_qubit_2)
+        local_qubit_2.H()
 
+        #From basis {|+i>, |-i>} to {|0>, |1>}
+        local_qubit_1.rot_Z(3, 1)
+        local_qubit_1.H()
+        local_qubit_2.rot_Z(3, 1)
+        local_qubit_2.H()
         r1 = local_qubit_1.measure()
         r2 = local_qubit_2.measure()
 
         yield from connection.flush()
 
-        print(f"[SERVER] Local qubits: {r1}, {r2}")
+        print(f"[SERVER] Non-BQC Results: {r1}, {r2}")
+
+        ####################### - END CLASSICAL GROVER - #######################
+         
+        #----------------------------------------------------------------------#
+
+        ########################### - BQC GROVER - #############################
         
+        #Receive the theta state qubits from client
         received_qubit_1 = yield from teleport_recv(context, self.PEER_CLIENT)
         received_qubit_2 = yield from teleport_recv(context, self.PEER_CLIENT)
         received_qubit_3 = yield from teleport_recv(context, self.PEER_CLIENT)
@@ -81,17 +91,28 @@ class ServerProgram(Program):
         received_qubit_3.rot_Z(angle=delta_3)
         received_qubit_3.measure()
         yield from connection.flush()
+        
+        received_qubit_1.rot_Z(1, 1)
+        received_qubit_4.rot_Z(1, 1)
 
-        #Retrieve tagged state by measuring 1 and 4
-        received_qubit_1.rot_Z(1, 1) #angle = pi/2
+        #The results are in the basis {|+i>, |-i>}
+        #From basis {|+i>, |-i>} to {|0>, |1>}
+        received_qubit_1.rot_Z(3, 1)
+        received_qubit_1.H()
+        received_qubit_4.rot_Z(3, 1)
+        received_qubit_4.H()
+
+        #Measure in the Z-basis, it retrieves the tagged state
         r_2 = received_qubit_1.measure()
-        received_qubit_4.rot_Z(1, 1) #angle = pi/2
         r_3 = received_qubit_4.measure()
         yield from connection.flush()
 
-        print(f"[SERVER] Results: {r_2}, {r_3}")
+        print(f"[SERVER] BQC Results: {r_2}, {r_3}")
+
+        ########################## - END BQC GROVER - ##########################
 
         return {}
+    
 
 class ClientProgram(Program):
     NODE_NAME = "Client"
@@ -105,7 +126,9 @@ class ClientProgram(Program):
             epr_sockets=[self.PEER_SERVER],
             max_qubits=2,
         )
-
+        
+        
+    #Prepare the state that the Client send to the Server
     def theta_state(self, theta, connection):
         qubit = Qubit(connection)
         qubit.H()
@@ -120,7 +143,7 @@ class ClientProgram(Program):
         # get connection to QNPU
         connection = context.connection
 
-        print(f"{ns.sim_time()} ns: Hello from {self.NODE_NAME}")
+        ############################### - BQC GROVER - #########################
 
         #Initialize the angles
         theta_1 = 0
@@ -140,6 +163,7 @@ class ClientProgram(Program):
         yield from teleport_send(theta_3_qubit, context, self.PEER_SERVER)
         yield from teleport_send(theta_4_qubit, context, self.PEER_SERVER)
 
+        #Generate random r2 and r3
         r2: int = randint(0, 1)
         r3: int = randint(0, 1)
 
@@ -147,6 +171,7 @@ class ClientProgram(Program):
         phi_2 = -pi / 2
         phi_3 = pi
 
+        #Define both delta2 and delta3
         delta_2 = phi_2 + pi * r2 + theta_2
         delta_3 = phi_3 + pi * r3 + theta_3
 
@@ -155,5 +180,5 @@ class ClientProgram(Program):
 
         csocket_SERVER.send(delta_2)
         csocket_SERVER.send(delta_3)
-
+        ########################## - END BQC GROVER - ##########################
         return {}
